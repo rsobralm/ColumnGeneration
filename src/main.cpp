@@ -118,11 +118,11 @@ int main(int argc, char **argv)
 			pricing_problem.getValues(x, entering_col);
 
 			cout << endl << "Entering column:" << endl;
-			// for (size_t i = 0; i < n; i++)
-			// {
-			// 	cout << (entering_col[i] < 0.5 ? 0 : 1) << endl;
-			// }
-			// cout << endl;
+			for (size_t i = 0; i < n; i++)
+			{
+				cout << (entering_col[i] < 0.5 ? 0 : 1) << endl;
+			}
+			cout << endl;
 
 			// Add the column to the master problem
 			// (the cost of the new variable is always 1)

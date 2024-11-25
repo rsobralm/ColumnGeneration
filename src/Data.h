@@ -6,13 +6,11 @@
 
 class Data
 {
-   private:
+   public:
 
       int bin_capacity;
       int n_items;
       std::vector<int> weights;
-
-   public:
 
       void readData(char* filePath);
 

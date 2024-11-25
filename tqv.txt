@@ -1,0 +1,7 @@
+1 - Voce resolve a gc ate achar o otimo da relaxaçao linear (custo reduzido positivo) como esta fazendo agora.
+2 - Ao fim da gc, cria uma matriz de doubles z_{ij} e calcula-os como z_{ij} = (somatorio do valor de todos os lambdas que possuem o item i e o item j). Voce vai precisar manter uma estrutura de dados que diz quais itens estao associados a cada lambda.
+3 - Acha i e j para os quais z_{ij} é o mais fracionario possível (i.e., |z_{ij} - 0.5| é o mais proximo de zero)
+4 - gera dois nós filhos: um onde i e j devem estar sempre separados e outro onde i e j devem estar sempre juntos no mesmo bin.
+5 - isso significa que cada no tem duas listas: uma lista de pares de itens que devem ficar separados, e outra lista de pares de itens que devem ficar juntos. Os nós filhos herdam as listas dos pais
+6 - Pra forçar i e j a estarem separados em um certo nó, tem que forçar eles tanto na relaxaçao linear quanto no pricing. Para forçar na relaxaçao linear, voce tem que pegar todos os lambdas que contem i e j e usar o método setUB(0). Isso força o UB daquele lambda a ser 0, efetivamente removendo a variavel do modelo. Pra forçar no pricing, voce tem que adicionar uma restriçao nova ao problema da mochila. No caso em que i e j devem estar juntos, é praticamente a mesma coisa, so que ao contrario. 
+7 - Lembrar de ajeitar o problema mestre depois, quando for visitar outro nó da árvore.
