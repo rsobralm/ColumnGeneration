@@ -13,6 +13,7 @@ public:
     Data *data;
     IloCplex pricing_problem;
     IloBoolVarArray x;
+    IloModel pricing_model;
 
     Pricing(Data *data, IloEnv env, IloNumArray pi);
     void buildPricingProblem();

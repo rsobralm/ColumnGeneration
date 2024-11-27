@@ -28,7 +28,28 @@ std::vector<std::vector<double>> BP::getMatrixZ(IloNumArray lambda_values, std::
 	return z;
 }
 
-void BP::columnGeneration(){
+std::pair<int, int> getFractionalPair(std::vector<std::vector<double>> z, std::vector<std::vector<bool>> lambda_items){
+	// Find the most fractional pair of items
+
+	double most_fractional = std::numeric_limits<double>::infinity();
+	std::pair<int, int> fractional_pair = std::make_pair(-1, -1);
+
+	int z_size = z.size();
+	double dist;
+
+	for (int i = 0; i < z_size; i++){
+		for (int j = i+1; j < z_size; j++){
+			dist = fabs(z[i][j] - 0.5);
+			if (dist < most_fractional){
+				most_fractional = dist;
+				fractional_pair = std::make_pair(i, j);
+			}
+		}
+	}
+	return fractional_pair;
+}
+
+void BP::columnGeneration(Node &node){
 
     IloEnv env;
 
@@ -113,27 +134,44 @@ void BP::columnGeneration(){
     
 }
 
-// void BP::addConstraintItemsTogether(IloModel &pricing_model, std::vector<std::pair<int, int>> together, std::vector<std::vector<bool>> &lambdaItens){
+void BP::addConstraintItemsTogether(Master *master, Pricing *pricing, std::vector<std::pair<int, int>> &together, std::vector<std::vector<bool>> &lambdaItens){
     
-//     for (auto &p : together){
+    for (auto &p : together){
 
-//         pricing_model.add(x[p.first] == x[p.second]);
+        pricing->pricing_model.add(pricing->x[p.first] == pricing->x[p.second]);
 
-//         for (int i = data->n_items; i < lambdaItens.size(); i++){
+        for (int i = data->n_items; i < lambdaItens.size(); i++){
            
-//            // None of the items are in the lambda
-//             if (lambdaItens[i][p.first] == false && lambdaItens[i][p.second] == false){
-//                 continue;
-//             }
-//             // Both items are in the lambda
-//             if (lambdaItens[i][p.first] == true && lambdaItens[i][p.second] == true){
-//                 continue;
-//             }
-//             // Only one of the items is in the lambda, so we set lambda[i] = 0
-//             lambda[i].setUB(0.0);
-//         }
-//     }
-// }
+           // None of the items are in the lambda
+            if (lambdaItens[i][p.first] == false && lambdaItens[i][p.second] == false){
+                continue;
+            }
+            // Both items are in the lambda
+            if (lambdaItens[i][p.first] == true && lambdaItens[i][p.second] == true){
+                continue;
+            }
+            // Only one of the items is in the lambda, so we set lambda[i] = 0
+            master->lambda[i].setUB(0.0);
+        }
+    }
+}
+
+void BP::addConstraintItemsSeparated(Master *master, Pricing *pricing, std::vector<std::pair<int, int>> &separated, std::vector<std::vector<bool>> &lambdaItens){
+    
+    for (auto &p : separated){
+
+        pricing->pricing_model.add(pricing->x[p.first] + pricing->x[p.second] <= 1);
+
+        for (int i = data->n_items; i < lambdaItens.size(); i++){
+            
+			// Both items are in the lambda
+            if (lambdaItens[i][p.first] == true && lambdaItens[i][p.second] == true){
+				master->lambda[i].setUB(0.0);
+            }
+
+        }
+    }
+}
 
 
 void BP::BranchAndPrice(){
@@ -147,8 +185,17 @@ void BP::BranchAndPrice(){
 	tree[0].separated = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
 	tree[0].merged = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
 
+	columnGeneration();
+
+
+
 
 	while(!tree.empty()){
+
+		// roda a geração de colunas pro nó atual
+		// se a solução for inteira, atualiza o UB, se for ótima, encerra.
+		// se for fracionário e o LB for pior que a melhor solução inteira podar
+		// se for fracionário e o LB for melhor que a melhor solução inteira, ramifica
 
 
 	}

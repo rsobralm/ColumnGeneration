@@ -11,7 +11,8 @@ Pricing::~Pricing()
 
 void Pricing::buildPricingProblem()
 {
-    IloModel pricing_model(env);
+    //IloModel pricing_model(env);
+    pricing_model = IloModel(env);
     //IloBoolVarArray x(env, data->n_items);
     x = IloBoolVarArray(env, data->n_items);
 
