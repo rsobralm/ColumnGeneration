@@ -1,0 +1,36 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug cg",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/cg",
+            "args": [
+                "/home/rafael/KIT-OR/CG/instances2/N1C1W1_A.BPP"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "miDebuggerPath": "/usr/bin/gdb",  // Adjust this path if necessary
+            "preLaunchTask": "compile src",
+            "externalConsole": true,
+            "logging": {
+                "moduleLoad": false,
+                "programOutput": true,
+                "trace": true
+            },
+            "osx": {
+                "MIMode": "lldb",
+                "miDebuggerPath": "/usr/bin/lldb"
+            }
+        }
+    ]
+}

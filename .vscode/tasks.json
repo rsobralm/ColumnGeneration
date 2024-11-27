@@ -1,0 +1,47 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compile src",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-O3",
+                "-fPIC",
+                "-fexceptions",
+                "-DNDEBUG",
+                "-DIL_STD",
+                "-std=c++2a",
+                "${workspaceFolder}/src/*.cpp",
+                "-o",
+                "${workspaceFolder}/cg",
+                "-I/opt/ibm/ILOG/CPLEX_Studio201/cplex/include",
+                "-I/opt/ibm/ILOG/CPLEX_Studio201/concert/include",
+                "-L/opt/ibm/ILOG/CPLEX_Studio201/cplex/lib/x86-64_linux/static_pic",
+                "-L/opt/ibm/ILOG/CPLEX_Studio201/concert/lib/x86-64_linux/static_pic",
+                "-lconcert",
+                "-lilocplex",
+                "-lcplex",
+                "-lm",
+                "-lpthread",
+                "-ldl"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"],
+            "detail": "Compile C++ code with CPLEX"
+        },
+        {
+            "label": "Run Program",
+            "type": "shell",
+            "command": "${workspaceFolder}/cg",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
