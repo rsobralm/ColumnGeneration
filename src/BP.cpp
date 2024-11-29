@@ -49,38 +49,63 @@ std::pair<int, int> getFractionalPair(std::vector<std::vector<double>> z, std::v
 	return fractional_pair;
 }
 
-void BP::columnGeneration(Node &node){
+
+void BP::prune(IloNumVarArray &lambda){
+	 for (int i = 0; i < lambda.getSize(); i++){
+        lambda[i].setUB(IloInfinity);
+    }
+}
+
+std::pair<int, int> BP::columnGeneration(Node *node){
 
     IloEnv env;
 
     Master master(data, env);
     master.buildMasterProblem();
+
+	master.setBounds(node, master.lambda_items);
+
     master.solveMasterProblem();
-    //Pricing pricing(data, env);
+
 
     int lambda_counter = data->n_items;
 
     while (true){
+		
+		if (master.rmp.getCplexStatus() == IloCplex::Infeasible){
+            break;
+        }
+
+
         IloNumArray pi(env, data->n_items);
         master.rmp.getDuals(pi, master.partition_constraint);
         Pricing pricing(data, env, pi);
         pricing.buildPricingProblem();
+
+		pricing.addBranchingConstraints(node->separated, node->merged);
         pricing.solvePricingProblem();
 
+
+
+
+		// If pricing is infeasible prune the node
+
+
+		// If reduced cost is negative, add the column to the master problem
         if (pricing.pricing_problem.getObjValue() < -1e-5){
 
-			std::cout << "Reduced cost is equal to " << pricing.pricing_problem.getObjValue() << ", which is less than 0..." << std::endl;
+			//std::cout << "Reduced cost is equal to " << pricing.pricing_problem.getObjValue() << ", which is less than 0..." << std::endl;
 
 			IloNumArray entering_col(env, data->n_items);
 
 			pricing.pricing_problem.getValues(pricing.x, entering_col);
 
-			std::cout << std::endl << "Entering column:" << std::endl;
-			for (size_t i = 0; i < data->n_items; i++)
-			{
-				std::cout << (entering_col[i] < 0.5 ? 0 : 1) << std::endl;
-			}
-			std::cout << std::endl;
+			// std::cout << std::endl << "Entering column:" << std::endl;
+			// for (size_t i = 0; i < data->n_items; i++)
+			// {
+			// 	std::cout << (entering_col[i] < 0.5 ? 0 : 1) << std::endl;
+			// }
+			// std::cout << std::endl;
 
 			std::vector<bool> items(data->n_items, false);
             for (int i = 0; i < pricing.x.getSize(); i++)
@@ -104,33 +129,90 @@ void BP::columnGeneration(Node &node){
 
 			master.lambda.add(new_lambda);
 
-			std::cout << "Solving the RMP again..." << std::endl;
+			//std::cout << "Solving the RMP again..." << std::endl;
 
 			// ...
 			master.rmp.solve();
 		}
 		else
 		{
-			std::cout << "No column with negative reduced costs found. The current basis is optimal" << std::endl;
+			//std::cout << "No column with negative reduced costs found. The current basis is optimal" << std::endl;
 			// cout << "Final master problem: " << endl;
 			// system("cat model.lp");
 			break;
 		}
+
     }
 
-    master.rmp.solve();
-	int n_lambdas = 0;
+	IloNumArray lambda_values(env, master.lambda.getSize());
+	master.rmp.getValues(lambda_values, master.lambda);
 
-	for (size_t j = 0; j < master.lambda.getSize(); j++)
-	{	
-		if (master.rmp.getValue(master.lambda[j]) > 0.5)
-			n_lambdas++;
-			//cout << <<rmp.getValue(lambda[j]) << " ";
+	// Prune if there's a artificial variable with a positive value
+	for (int i = 0; i < data->n_items; i++){
+		if (lambda_values[i] > EPS){
+			prune(master.lambda);
+			//std::cout << "artificial variable" << std::endl;
+
+			return  std::make_pair(-1, -1);
+		}
+    }
+
+	// Prune if the LB is greater than the best integer solution
+	if (std::ceil(master.rmp.getObjValue() - EPS) - UB >= 0){
+		prune(master.lambda);
+		//std::cout << "LB maior que UB" << std::endl;
+		return std::make_pair(-1, -1);
 	}
-	std::cout << std::endl;
-	env.end();
 
-	std::cout << n_lambdas << std::endl;
+
+	std::vector<std::vector<double>> z = getMatrixZ(lambda_values, master.lambda_items);
+
+	std::pair<int, int> fractional_pair = getFractionalPair(z, master.lambda_items);
+
+
+	// If the solution is integer, update the UB and prune
+
+	if (checkIfIntegerSolution(lambda_values)){
+		//std::cout << "Integer solution found: " << master.rmp.getObjValue() << std::endl;
+		if (master.rmp.getObjValue() < UB){
+			UB = master.rmp.getObjValue();
+		}
+
+		prune(master.lambda);
+
+		return std::make_pair(-1, -1);
+	}
+
+	
+	// if (std::abs(0.5 - z[fractional_pair.first][fractional_pair.second]) < EPS){
+
+	// 	std::cout << "Integer solution found: " << master.rmp.getObjValue() << std::endl;
+    //     if (master.rmp.getObjValue() < UB){
+    //         UB = master.rmp.getObjValue();
+    //     }
+
+    //     prune(master.lambda);
+
+    //     return std::make_pair(-1, -1);
+    // }
+
+
+	std::cout << "Most fractional pair: " << fractional_pair.first << " " << fractional_pair.second << std::endl;
+	return fractional_pair;
+
+    // master.rmp.solve();
+	// int n_lambdas = 0;
+
+	// for (size_t j = 0; j < master.lambda.getSize(); j++)
+	// {	
+	// 	if (master.rmp.getValue(master.lambda[j]) > 0.5)
+	// 		n_lambdas++;
+	// 		//cout << <<rmp.getValue(lambda[j]) << " ";
+	// }
+	// std::cout << std::endl;
+	// env.end();
+
+	// std::cout << n_lambdas << std::endl;
     
 }
 
@@ -173,6 +255,15 @@ void BP::addConstraintItemsSeparated(Master *master, Pricing *pricing, std::vect
     }
 }
 
+bool BP::checkIfIntegerSolution(IloNumArray lambda_values){
+	for (int i = 0; i < lambda_values.getSize(); i++){
+		if(lambda_values[i] > EPS && fabs(lambda_values[i] - (int)lambda_values[i]) > EPS){
+			return false;
+		}
+	}
+	return true;
+}
+
 
 void BP::BranchAndPrice(){
 
@@ -182,23 +273,48 @@ void BP::BranchAndPrice(){
 	tree.push_back(root);
 	tree[0].LB = 0;
 	tree[0].UB = data->n_items;
-	tree[0].separated = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
-	tree[0].merged = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
-
-	columnGeneration();
-
-
+	//tree[0].separated = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
+	//tree[0].merged = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
 
 
 	while(!tree.empty()){
+
+		Node current = tree.back();
+		std::pair<int, int> p = columnGeneration(&current);
+
+		if (p.first == -1 && p.second == -1){
+			tree.pop_back();
+			continue;
+		}
+
+		Node left(data);
+		Node right(data);
+
+		left.LB = current.LB;
+		left.UB = current.UB;
+		left.separated = current.separated;
+		left.merged = current.merged;
+
+		right.LB = current.LB;
+		right.UB = current.UB;
+		right.separated = current.separated;
+		right.merged = current.merged;
+
+		left.merged.push_back(p);
+		right.separated.push_back(p);
+
+		tree.push_back(left);
+		tree.push_back(right);
+
 
 		// roda a geração de colunas pro nó atual
 		// se a solução for inteira, atualiza o UB, se for ótima, encerra.
 		// se for fracionário e o LB for pior que a melhor solução inteira podar
 		// se for fracionário e o LB for melhor que a melhor solução inteira, ramifica
 
-
 	}
+
+	std::cout << "Best solution found: " << UB << std::endl;
 
 }
 

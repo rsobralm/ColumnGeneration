@@ -23,6 +23,7 @@ public:
     Master(Data *data, IloEnv env);
     void buildMasterProblem();
     void solveMasterProblem();
+    void setBounds(Node *node, std::vector<std::vector<bool>> &lambdaItens);
     ~Master();
 };
 

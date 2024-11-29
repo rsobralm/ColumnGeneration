@@ -33,17 +33,28 @@ void Pricing::buildPricingProblem()
     }
     pricing_model.add(sum_weights <= data->bin_capacity);
 
-    
-    pricing_problem = IloCplex(pricing_model);
 
-   
 
 }
 
 void Pricing::solvePricingProblem(){
+    pricing_problem = IloCplex(pricing_model);
     pricing_problem.setOut(env.getNullStream()); // disables CPLEX log
     pricing_problem.solve();
 
+}
+
+void Pricing::addBranchingConstraints(std::vector<std::pair<int, int>> &together, std::vector<std::pair<int, int>> &separated){
+    for (auto &p : together){
+
+        pricing_model.add(x[p.first] == x[p.second]);
+    }
+
+    for (auto &p : separated){
+
+        pricing_model.add(x[p.first] + x[p.second] <= 1);
+
+    }
 }
 
 

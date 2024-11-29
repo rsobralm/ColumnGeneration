@@ -11,14 +11,15 @@ class Node
         std::vector<std::pair<int, int>> separated, merged;
         int UB;
         int LB;
-        Node(Data *data);
+        Node(Data *data){
+            this->data = data;
+        }
 
-    Node::Node(Data *data)
-    {
-        this->data = data;
-        this->UB = 0;
-        this->LB = 0;
-    }
+        ~Node(){
+            
+        }
+
+
 };
 
 #endif
