@@ -3,12 +3,13 @@
 
 #include <iostream>
 #include "Data.h"
+#include <set>
 
 class Node
 {
     public:
         Data *data;
-        std::vector<std::pair<int, int>> separated, merged;
+        std::set<std::pair<int, int>> separated, merged;
         int UB;
         int LB;
         Node(Data *data){

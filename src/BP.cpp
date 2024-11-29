@@ -58,6 +58,22 @@ void BP::prune(IloNumVarArray &lambda){
 
 std::pair<int, int> BP::columnGeneration(Node *node){
 
+
+	// for (auto &p : node->separated){
+	// 	std::cout << "Separated: " << p.first << " " << p.second << std::endl;
+	// }
+
+	// std::cout << node->merged.size() << std::endl;
+	// for (auto &p : node->merged){
+	// 	std::cout << "Together: " << p.first << " " << p.second << std::endl;
+	// }
+	// for (int i = 0; i < node->separated.size(); i++){
+	// 	std::cout << node->separated[i].first << " " << node->separated[i].second << std::endl;
+	// }
+	// for (int i = 0; i < node->merged.size(); i++){
+	// 	std::cout << node->merged[i].first << " " << node->merged[i].second << std::endl;
+	// }
+
     IloEnv env;
 
     Master master(data, env);
@@ -90,6 +106,11 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 		// If pricing is infeasible prune the node
 
+		if (pricing.pricing_problem.getCplexStatus() == IloCplex::Infeasible){
+			prune(master.lambda);
+			return std::make_pair(-1, -1);
+		}
+
 
 		// If reduced cost is negative, add the column to the master problem
         if (pricing.pricing_problem.getObjValue() < -1e-5){
@@ -110,7 +131,7 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 			std::vector<bool> items(data->n_items, false);
             for (int i = 0; i < pricing.x.getSize(); i++)
             {
-                if (entering_col[i] > 0.5)
+                if (entering_col[i] >= 0.5)
                 {
                     items[i] = true;
                     // std::cout << i << " ";
@@ -139,10 +160,18 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 			//std::cout << "No column with negative reduced costs found. The current basis is optimal" << std::endl;
 			// cout << "Final master problem: " << endl;
 			// system("cat model.lp");
+			//pricing.pricing_model.end();
 			break;
 		}
 
+		//pricing.pricing_model.end();
     }
+
+
+	if (master.rmp.getCplexStatus() == IloCplex::Infeasible){
+		prune(master.lambda);
+		return std::make_pair(-1, -1);
+	}
 
 	IloNumArray lambda_values(env, master.lambda.getSize());
 	master.rmp.getValues(lambda_values, master.lambda);
@@ -169,11 +198,14 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 	std::pair<int, int> fractional_pair = getFractionalPair(z, master.lambda_items);
 
+	std::cout << "Objective value: " << master.rmp.getObjValue() << std::endl;
+	std::cout << "Z Value: " << z[fractional_pair.first][fractional_pair.second] << std::endl;
+
 
 	// If the solution is integer, update the UB and prune
 
-	if (checkIfIntegerSolution(lambda_values)){
-		//std::cout << "Integer solution found: " << master.rmp.getObjValue() << std::endl;
+	if (!fabs(z[fractional_pair.first][fractional_pair.second] - std::round(z[fractional_pair.first][fractional_pair.second])) > EPS){
+		std::cout << "Integer solution found: " << master.rmp.getObjValue() << std::endl;
 		if (master.rmp.getObjValue() < UB){
 			UB = master.rmp.getObjValue();
 		}
@@ -282,6 +314,8 @@ void BP::BranchAndPrice(){
 		Node current = tree.back();
 		std::pair<int, int> p = columnGeneration(&current);
 
+		//std::cin.get();
+
 		if (p.first == -1 && p.second == -1){
 			tree.pop_back();
 			continue;
@@ -300,12 +334,12 @@ void BP::BranchAndPrice(){
 		right.separated = current.separated;
 		right.merged = current.merged;
 
-		left.merged.push_back(p);
-		right.separated.push_back(p);
+		left.merged.insert(p);
+		right.separated.insert(p);
 
 		tree.push_back(left);
 		tree.push_back(right);
-
+		//tree.push_back(left);
 
 		// roda a geração de colunas pro nó atual
 		// se a solução for inteira, atualiza o UB, se for ótima, encerra.

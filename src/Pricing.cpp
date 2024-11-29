@@ -44,7 +44,7 @@ void Pricing::solvePricingProblem(){
 
 }
 
-void Pricing::addBranchingConstraints(std::vector<std::pair<int, int>> &together, std::vector<std::pair<int, int>> &separated){
+void Pricing::addBranchingConstraints(std::set<std::pair<int, int>> &together, std::set<std::pair<int, int>> &separated){
     for (auto &p : together){
 
         pricing_model.add(x[p.first] == x[p.second]);

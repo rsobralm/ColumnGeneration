@@ -3,6 +3,7 @@
 
 #include <ilcplex/ilocplex.h>
 #include "Data.h"
+#include <set>
 
 class Pricing
 {
@@ -18,7 +19,7 @@ public:
     Pricing(Data *data, IloEnv env, IloNumArray pi);
     void buildPricingProblem();
     void solvePricingProblem();
-    void addBranchingConstraints(std::vector<std::pair<int, int>> &together, std::vector<std::pair<int, int>> &separated);
+    void addBranchingConstraints(std::set<std::pair<int, int>> &together, std::set<std::pair<int, int>> &separated);
     
     ~Pricing();
 };
