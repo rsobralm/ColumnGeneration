@@ -21,6 +21,7 @@ public:
 	IloCplex rmp; // restricted master problem
     std::vector<std::vector<bool>> lambda_items; // 1 if the item is in the lambda, 0 otherwise
     Master(Data *data, IloEnv env);
+    Master();
     void buildMasterProblem();
     void solveMasterProblem();
     void setBounds(Node *node, std::vector<std::vector<bool>> &lambdaItens);

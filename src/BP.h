@@ -3,12 +3,13 @@
 
 #include <iostream>
 #include <ilcplex/ilocplex.h>
+#include <cmath>
 #include "Data.h"
 #include "Master.h"
 #include "Pricing.h"
 #include "Node.h"
 
-#define EPS 1e-5
+#define EPS 1e-6
 
 
 
@@ -28,10 +29,15 @@ public:
 
     double UB = std::numeric_limits<double>::infinity();
 
+    IloEnv env;
+    Master master;
+
+    std::vector<std::vector<bool>> lambdaItens;
+
     BP(Data *data);
     ~BP();
     std::pair<int, int> columnGeneration(Node *node);
-    std::vector<std::vector<double>> getMatrixZ(IloNumArray lambda_values, std::vector<std::vector<bool>> lambda_items);
+    void setMatrixZ(std::vector<std::vector<double>> &z, IloNumArray &lambda_values, std::vector<std::vector<bool>> &lambda_items);
     void addConstraintItemsTogether(Master *master, Pricing *pricing, std::vector<std::pair<int, int>> &together, std::vector<std::vector<bool>> &lambdaItens);
     void addConstraintItemsSeparated(Master *master, Pricing *pricing, std::vector<std::pair<int, int>> &together, std::vector<std::vector<bool>> &lambdaItens);
     void BranchAndPrice();

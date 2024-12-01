@@ -11,6 +11,8 @@ Master::Master(Data *data, IloEnv env) : data(data)
 	}
 }
 
+Master::Master(){}
+
 
 Master::~Master()
 {
