@@ -19,7 +19,7 @@ void BP::setMatrixZ(std::vector<std::vector<double>> &z, IloNumArray &lambda_val
 	for (int i = 0; i < data->n_items; i++){
         for (int j = i + 1; j < data->n_items; j++){
             for (int k = data->n_items; k < lambda_items.size(); k++){
-                if (lambda_items[k][i] && lambda_items[k][j]){
+                if (lambda_items[k][i] and lambda_items[k][j]){
                     z[i][j] += lambda_values[k];
                     z[j][i] += lambda_values[k];
                 }
@@ -87,14 +87,14 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 	master.setBounds(node, master.lambda_items);
 
-	// std::cout << "Building master problem " << master.lambda_items.size() << std::endl;
-	// for (int i = 0; i < master.lambda_items.size(); i++){
-	// 	for (int j = 0; j < master.lambda_items[i].size(); j++){
-	// 		std::cout << master.lambda_items[i][j] << " ";
-	// 	}
-	// 	std::cout << master.lambda[i] <<std::endl;
-	// }
-	// std::cin.get();
+	std::cout << "Building master problem " << master.lambda_items.size() << std::endl;
+	for (int i = 0; i < master.lambda_items.size(); i++){
+		for (int j = 0; j < master.lambda_items[i].size(); j++){
+			std::cout << master.lambda_items[i][j] << " ";
+		}
+		std::cout << master.lambda[i] <<std::endl;
+	}
+	std::cin.get();
 
 	
 
@@ -103,15 +103,18 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 	// }
 
     master.solveMasterProblem();
+	//master.rmp.solve();
 
-	//std::cout << "n_cols: " << master.rmp.getNcols()  << std::endl;
+	std::cout << "n_cols: " << master.rmp.getNcols()  << std::endl;
+	std::cout << "n_rows: " << master.rmp.getNrows()  << std::endl;
+	std::cout << "Obj value: " << master.rmp.getObjValue() << std::endl;
 
 
-	IloNumArray pi(env2, data->n_items);
-	Pricing pricing(data, env2, pi);
-    pricing.buildPricingProblem();
+	// IloNumArray pi(env2, data->n_items);
+	// Pricing pricing(data, env2, pi);
+    // pricing.buildPricingProblem();
 
-	pricing.addBranchingConstraints(node->separated, node->merged);
+	// pricing.addBranchingConstraints(node->separated, node->merged);
 
 
 	std::vector<std::vector<double>> z = std::vector<std::vector<double>> (data->n_items, std::vector<double>(data->n_items, 0));
@@ -124,24 +127,14 @@ std::pair<int, int> BP::columnGeneration(Node *node){
         }
 
 
-		IloExpr reduced_cost(env2);
-		IloExpr sumPacked(env2);
-        IloNumArray pi(env2, data->n_items);
+		IloNumArray pi(env, data->n_items);
         master.rmp.getDuals(pi, master.partition_constraint);
+		Pricing pricing(data, env, pi);
+        pricing.buildPricingProblem();
 
-		reduced_cost += 1;
-
-		for (int i = 0; i < data->n_items; i++)
-        {
-            // std::cout << pi[i] << " ";
-            reduced_cost -= pi[i] * pricing.x[i];
-			sumPacked += data->getItemWeight(i) * pricing.x[i];
-        }
-
-		pricing.pricing_model.add(sumPacked <= data->bin_capacity);
-        pricing.objective_function.setExpr(reduced_cost);
-        
+		pricing.addBranchingConstraints(node->separated, node->merged);
         pricing.solvePricingProblem();
+
 
 		pi.clear();
         pi.end();
@@ -160,7 +153,7 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 			return std::make_pair(-1, -1);
 		}
 
-		//std::cout << "Reduced cost is equal to " << pricing.pricing_problem.getObjValue()  << std::endl;
+		std::cout << "Reduced cost is equal to " << pricing.pricing_problem.getObjValue()  << std::endl;
 
 		// If reduced cost is negative, add the column to the master problem
         if (pricing.pricing_problem.getObjValue() < -EPS){
@@ -186,13 +179,13 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 			// (the cost of the new variable is always 1)
 			IloNumVar new_lambda(master.master_objective(1) + master.partition_constraint(entering_col), 0, IloInfinity);
 			char var_name[50];
-			sprintf(var_name, "y%d", master.lambda.getSize());
+			sprintf(var_name, "y%d", (int)master.lambda.getSize());
 			new_lambda.setName(var_name);
 
 			master.lambda.add(new_lambda);
 
 			std::vector<bool> items(data->n_items, false);
-            for (int i = 0; i < pricing.x.getSize(); i++)
+            for (int i = 0; i < entering_col.getSize(); i++)
             {
                 if (entering_col[i] > 1 - EPS)
                 {
@@ -241,8 +234,8 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 		if (lambda_values[i] > EPS){
 			prune(master.lambda);
 
-			pricing.pricing_model.end();
-			env2.end();
+			//pricing.pricing_model.end();
+			//env2.end();
 			//lambda_values.end();
 			master.rmp.clear();
 			master.rmp.end();
@@ -257,8 +250,8 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 		prune(master.lambda);
 		//std::cout << "LB maior que UB" << std::endl;
 
-		pricing.pricing_model.end();
-		env2.end();
+		//pricing.pricing_model.end();
+		//env2.end();
 		//lambda_values.end();
 		master.rmp.clear();
 		master.rmp.end();
@@ -291,8 +284,8 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 		prune(master.lambda);
 
-		pricing.pricing_model.end();
-		env2.end();
+		//pricing.pricing_model.end();
+		//env2.end();
 		//lambda_values.end();
 		master.rmp.clear();
 		master.rmp.end();
@@ -329,59 +322,20 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 	
 
-    master.rmp.solve();
-	int n_lambdas = 0;
+    // master.rmp.solve();
+	// int n_lambdas = 0;
 
-	for (size_t j = 0; j < master.lambda.getSize(); j++)
-	{	
-		if (master.rmp.getValue(master.lambda[j]) > 0.5)
-			n_lambdas++;
-			//cout << <<rmp.getValue(lambda[j]) << " ";
-	}
-	std::cout << std::endl;
-	env.end();
+	// for (size_t j = 0; j < master.lambda.getSize(); j++)
+	// {	
+	// 	if (master.rmp.getValue(master.lambda[j]) > 0.5)
+	// 		n_lambdas++;
+	// 		//cout << <<rmp.getValue(lambda[j]) << " ";
+	// }
+	// std::cout << std::endl;
+	// env.end();
 
-	std::cout << n_lambdas << std::endl;
+	// std::cout << n_lambdas << std::endl;
 
-}
-
-void BP::addConstraintItemsTogether(Master *master, Pricing *pricing, std::vector<std::pair<int, int>> &together, std::vector<std::vector<bool>> &lambdaItens){
-    
-    for (auto &p : together){
-
-        pricing->pricing_model.add(pricing->x[p.first] == pricing->x[p.second]);
-
-        for (int i = data->n_items; i < lambdaItens.size(); i++){
-           
-           // None of the items are in the lambda
-            if (lambdaItens[i][p.first] == false && lambdaItens[i][p.second] == false){
-                continue;
-            }
-            // Both items are in the lambda
-            if (lambdaItens[i][p.first] == true && lambdaItens[i][p.second] == true){
-                continue;
-            }
-            // Only one of the items is in the lambda, so we set lambda[i] = 0
-            master->lambda[i].setUB(0.0);
-        }
-    }
-}
-
-void BP::addConstraintItemsSeparated(Master *master, Pricing *pricing, std::vector<std::pair<int, int>> &separated, std::vector<std::vector<bool>> &lambdaItens){
-    
-    for (auto &p : separated){
-
-        pricing->pricing_model.add(pricing->x[p.first] + pricing->x[p.second] <= 1);
-
-        for (int i = data->n_items; i < lambdaItens.size(); i++){
-            
-			// Both items are in the lambda
-            if (lambdaItens[i][p.first] == true && lambdaItens[i][p.second] == true){
-				master->lambda[i].setUB(0.0);
-            }
-
-        }
-    }
 }
 
 bool BP::checkIfIntegerSolution(IloNumArray lambda_values){
@@ -438,10 +392,6 @@ void BP::BranchAndPrice(){
 		tree.push_back(right);
 		//tree.push_back(left);
 
-		// roda a geração de colunas pro nó atual
-		// se a solução for inteira, atualiza o UB, se for ótima, encerra.
-		// se for fracionário e o LB for pior que a melhor solução inteira podar
-		// se for fracionário e o LB for melhor que a melhor solução inteira, ramifica
 
 	}
 

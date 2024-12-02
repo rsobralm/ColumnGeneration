@@ -8,6 +8,7 @@
 #include "Master.h"
 #include "Pricing.h"
 #include "Node.h"
+#include <list>
 
 #define EPS 1e-6
 

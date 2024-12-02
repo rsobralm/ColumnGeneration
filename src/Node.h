@@ -14,11 +14,15 @@ class Node
         int LB;
         Node(Data *data){
             this->data = data;
-        }
+        };
+
+        Node(){
+            
+        };
 
         ~Node(){
             
-        }
+        };
 
 
 };
