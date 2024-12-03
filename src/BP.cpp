@@ -1,6 +1,7 @@
 #include "BP.h"
 
 
+
 BP::BP(Data *data) : data(data)
 {	
 
@@ -87,14 +88,14 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 	master.setBounds(node, master.lambda_items);
 
-	std::cout << "Building master problem " << master.lambda_items.size() << std::endl;
-	for (int i = 0; i < master.lambda_items.size(); i++){
-		for (int j = 0; j < master.lambda_items[i].size(); j++){
-			std::cout << master.lambda_items[i][j] << " ";
-		}
-		std::cout << master.lambda[i] <<std::endl;
-	}
-	std::cin.get();
+	// std::cout << "Building master problem " << master.lambda_items.size() << std::endl;
+	// for (int i = 0; i < master.lambda_items.size(); i++){
+	// 	for (int j = 0; j < master.lambda_items[i].size(); j++){
+	// 		std::cout << master.lambda_items[i][j] << " ";
+	// 	}
+	// 	std::cout << master.lambda[i] <<std::endl;
+	// }
+	// std::cin.get();
 
 	
 
@@ -105,9 +106,9 @@ std::pair<int, int> BP::columnGeneration(Node *node){
     master.solveMasterProblem();
 	//master.rmp.solve();
 
-	std::cout << "n_cols: " << master.rmp.getNcols()  << std::endl;
-	std::cout << "n_rows: " << master.rmp.getNrows()  << std::endl;
-	std::cout << "Obj value: " << master.rmp.getObjValue() << std::endl;
+	// std::cout << "n_cols: " << master.rmp.getNcols()  << std::endl;
+	// std::cout << "n_rows: " << master.rmp.getNrows()  << std::endl;
+	// std::cout << "Obj value: " << master.rmp.getObjValue() << std::endl;
 
 
 	// IloNumArray pi(env2, data->n_items);
@@ -115,9 +116,14 @@ std::pair<int, int> BP::columnGeneration(Node *node){
     // pricing.buildPricingProblem();
 
 	// pricing.addBranchingConstraints(node->separated, node->merged);
+	IloNumArray pi(env2, data->n_items);
+	Pricing pricing(data, env2, pi);
+    pricing.buildPricingProblem();
+	pricing.addBranchingConstraints(node->merged, node->separated);
 
 
 	std::vector<std::vector<double>> z = std::vector<std::vector<double>> (data->n_items, std::vector<double>(data->n_items, 0));
+
 
 
     while (true){
@@ -126,14 +132,14 @@ std::pair<int, int> BP::columnGeneration(Node *node){
             break;
         }
 
-
-		IloNumArray pi(env, data->n_items);
+		IloNumArray pi(env2, data->n_items);
         master.rmp.getDuals(pi, master.partition_constraint);
-		Pricing pricing(data, env, pi);
-        pricing.buildPricingProblem();
+		pricing.setObjectiveFunction(pi);
 
-		pricing.addBranchingConstraints(node->separated, node->merged);
+		
         pricing.solvePricingProblem();
+
+		//pricing.pricing_problem.exportModel("pricing.lp");
 
 
 		pi.clear();
@@ -153,7 +159,7 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 			return std::make_pair(-1, -1);
 		}
 
-		std::cout << "Reduced cost is equal to " << pricing.pricing_problem.getObjValue()  << std::endl;
+		//std::cout << "Reduced cost is equal to " << pricing.pricing_problem.getObjValue()  << std::endl;
 
 		// If reduced cost is negative, add the column to the master problem
         if (pricing.pricing_problem.getObjValue() < -EPS){
@@ -212,6 +218,16 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 			// cout << "Final master problem: " << endl;
 			// system("cat model.lp");
 			//pricing.pricing_model.end();
+
+			// IloBoolVarArray x_values(env2, pricing.x.getSize());
+			// pricing.pricing_problem.getValues(x_values, pricing.x);
+
+			// for (int i = 0; i < pricing.x.getSize(); i++)
+			// {
+			// 	std::cout << "x[" << i << "] " << pricing.pricing_problem.getValue(pricing.x[i]) << "\n";
+			// }
+
+
 			pricing.pricing_problem.clear();
             pricing.pricing_problem.end();
 			break;
@@ -225,6 +241,9 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 		prune(master.lambda);
 		return std::make_pair(-1, -1);
 	}
+
+	std::cout << "LB: " << master.rmp.getObjValue() << std::endl;
+	std::cout << "Ncols: " << master.rmp.getNcols() << std::endl;
 
 	IloNumArray lambda_values(env2, master.lambda.getSize());
 	master.rmp.getValues(lambda_values, master.lambda);
@@ -263,10 +282,10 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 	std::pair<int, int> fractional_pair = getFractionalPair(z, master.lambda_items);
 
-	std::cout << fractional_pair.first << " " << fractional_pair.second << std::endl;
+	// std::cout << fractional_pair.first << " " << fractional_pair.second << std::endl;
 
-	std::cout << "Objective value: " << master.rmp.getObjValue() << std::endl;
-	std::cout << "Z Value: " << z[fractional_pair.first][fractional_pair.second] << std::endl;
+	// std::cout << "Objective value: " << master.rmp.getObjValue() << std::endl;
+	// std::cout << "Z Value: " << z[fractional_pair.first][fractional_pair.second] << std::endl;
 
 
 	//z[fractional_pair.first][fractional_pair.second] = 1;
@@ -274,10 +293,10 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 	//std::cout << fabs(z[fractional_pair.first][fractional_pair.second] - std::round(z[fractional_pair.first][fractional_pair.second])) << std::endl;
 
-	std::cout << "Fractional value: " << fmod(z[fractional_pair.first][fractional_pair.second], 1) << std::endl;
+	//std::cout << "Fractional value: " << fmod(z[fractional_pair.first][fractional_pair.second], 1) << std::endl;
 
 	if (fmod(z[fractional_pair.first][fractional_pair.second], 1) < EPS){
-		std::cout << "Integer solution found: " << master.rmp.getObjValue() << std::endl;
+		//std::cout << "Integer solution found: " << master.rmp.getObjValue() << std::endl;
 		if (master.rmp.getObjValue() < UB){
 			UB = master.rmp.getObjValue();
 		}
@@ -317,7 +336,7 @@ std::pair<int, int> BP::columnGeneration(Node *node){
     // }
 
 
-	std::cout << "Most fractional pair: " << fractional_pair.first << " " << fractional_pair.second << std::endl;
+	//std::cout << "Most fractional pair: " << fractional_pair.first << " " << fractional_pair.second << std::endl;
 	return fractional_pair;
 
 	
@@ -359,41 +378,44 @@ void BP::BranchAndPrice(){
 	//tree[0].separated = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
 	//tree[0].merged = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
 
+	Node current = tree.back();
+	std::pair<int, int> p = columnGeneration(&current);
+	// while(!tree.empty()){
 
-	while(!tree.empty()){
+	// 	Node current = tree.back();
+	// 	std::pair<int, int> p = columnGeneration(&current);
 
-		Node current = tree.back();
-		std::pair<int, int> p = columnGeneration(&current);
+	// 	//std::cin.get();
 
-		//std::cin.get();
+	// 	if (p.first == -1 && p.second == -1){
+	// 		tree.pop_back();
+	// 		continue;
+	// 	}
 
-		if (p.first == -1 && p.second == -1){
-			tree.pop_back();
-			continue;
-		}
+	// 	Node left(data);
+	// 	Node right(data);
 
-		Node left(data);
-		Node right(data);
+	// 	left.LB = current.LB;
+	// 	left.UB = current.UB;
+	// 	left.separated = current.separated;
+	// 	left.merged = current.merged;
 
-		left.LB = current.LB;
-		left.UB = current.UB;
-		left.separated = current.separated;
-		left.merged = current.merged;
+	// 	right.LB = current.LB;
+	// 	right.UB = current.UB;
+	// 	right.separated = current.separated;
+	// 	right.merged = current.merged;
 
-		right.LB = current.LB;
-		right.UB = current.UB;
-		right.separated = current.separated;
-		right.merged = current.merged;
+	// 	left.merged.insert(p);
+	// 	right.separated.insert(p);
 
-		left.merged.insert(p);
-		right.separated.insert(p);
+	// 	tree.push_back(left);
+	// 	tree.push_back(right);
+	// 	//tree.push_back(left);
 
-		tree.push_back(left);
-		tree.push_back(right);
-		//tree.push_back(left);
+	// 	tree.pop_back();
+	// }
 
-
-	}
+	
 
 	std::cout << "Best solution found: " << UB << std::endl;
 

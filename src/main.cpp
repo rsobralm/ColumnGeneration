@@ -2,15 +2,29 @@
 #include <ilcplex/ilocplex.h>
 #include "Data.h"
 #include "BP.h"
+#include <sys/resource.h>
 
+
+double cpuTime()
+{
+    static struct rusage usage;
+    getrusage(RUSAGE_SELF, &usage);
+    return ((double)usage.ru_utime.tv_sec) + (((double)usage.ru_utime.tv_usec) / ((double)1000000));
+}
 
 int main(int argc, char **argv) 
 {
     Data data;
     data.readData(argv[1]);
 
+
+    double start = cpuTime();
     BP bp(&data);
     bp.BranchAndPrice();
+
+    double end = cpuTime();
+
+    std::cout << "Time: " << end - start << std::endl;
 
     return 0;
 }

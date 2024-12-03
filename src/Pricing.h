@@ -19,7 +19,7 @@ public:
 
     Pricing(Data *data, IloEnv env, IloNumArray pi);
     void buildPricingProblem();
-    void setObjectiveFunction(IloNumArray pi);
+    void setObjectiveFunction(IloNumArray &pi);
     void solvePricingProblem();
     void addBranchingConstraints(std::set<std::pair<int, int>> &together, std::set<std::pair<int, int>> &separated);
     

@@ -9,6 +9,7 @@
 #include "Pricing.h"
 #include "Node.h"
 #include <list>
+#include <sys/resource.h>
 
 #define EPS 1e-6
 
