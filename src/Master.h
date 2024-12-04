@@ -24,7 +24,6 @@ public:
     Master();
     void buildMasterProblem();
     void solveMasterProblem();
-    void setBounds(Node *node, std::vector<std::vector<bool>> &lambdaItens);
     ~Master();
 };
 

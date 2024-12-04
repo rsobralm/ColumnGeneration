@@ -57,20 +57,13 @@ void Pricing::setObjectiveFunction(IloNumArray &pi){
 
 void Pricing::solvePricingProblem(){
     
+
     pricing_problem = IloCplex(pricing_model);
+    pricing_problem.setParam(IloCplex::Param::Threads, 1);
     pricing_problem.setOut(env.getNullStream()); // disables CPLEX log
     pricing_problem.solve();
 
 }
 
-void Pricing::addBranchingConstraints(std::set<std::pair<int, int>> &together, std::set<std::pair<int, int>> &separated){
-    for (auto pair : together){
-        pricing_model.add(x[pair.first] == x[pair.second]);
-    }
-
-    for (auto pair : separated){
-        pricing_model.add(x[pair.first] + x[pair.second] <= 1);
-    }
-}
 
 
