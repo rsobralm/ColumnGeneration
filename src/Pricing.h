@@ -2,8 +2,12 @@
 #define PRICING_H
 
 #include <ilcplex/ilocplex.h>
-#include "Data.h"
 #include <set>
+#include "Data.h"
+
+
+#define BIG_M 1e6
+
 
 class Pricing
 {
@@ -20,7 +24,8 @@ public:
     Pricing(Data *data, IloEnv env, IloNumArray pi);
     void buildPricingProblem();
     void setObjectiveFunction(IloNumArray &pi);
-    void solvePricingProblem();    
+    void solvePricingProblem();   
+    double solveCombo(IloNumArray &pi, IloNumArray &x_values);
     ~Pricing();
 };
 

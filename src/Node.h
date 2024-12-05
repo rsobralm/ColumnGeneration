@@ -10,6 +10,7 @@ class Node
         std::set<std::pair<int, int>> separated, merged;
         int UB;
         int LB;
+        bool is_root = false;
 
         Node(){
             

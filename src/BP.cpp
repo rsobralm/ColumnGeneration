@@ -95,120 +95,186 @@ void BP::prune(IloNumVarArray &lambda){
 
 std::pair<int, int> BP::columnGeneration(Node *node){
 
-    
-	IloEnv env2;
+    IloEnv env2;
+
+		
 	IloNumArray pi(env2, data->n_items);
 	Pricing pricing(data, env2, pi);
 
-    pricing.buildPricingProblem();
+	pricing.buildPricingProblem();
 	setBoundsAndAddConstraints(&master, &pricing, node);
+
+	
+
 	
 	std::vector<std::vector<double>> z = std::vector<std::vector<double>>(data->getNItems(), std::vector<double>(data->getNItems(), 0));
 
 
     master.solveMasterProblem();
-	
 
-    while (true){
-		
-		if (master.rmp.getCplexStatus() == IloCplex::Infeasible){
-            break;
-        }
+	if (node->is_root){
 
-		IloNumArray pi(env2, data->n_items);
-        master.rmp.getDuals(pi, master.partition_constraint);
-		pricing.setObjectiveFunction(pi);
+		while (true){
+			if (master.rmp.getCplexStatus() == IloCplex::Infeasible){
+				break;
+			}
 
-		
-        pricing.solvePricingProblem();
-
-		//pricing.pricing_problem.exportModel("pricing.lp");
-
-
-		pi.clear();
-        pi.end();
-
-		// If pricing is infeasible prune the node
-		if (pricing.pricing_problem.getCplexStatus() == IloCplex::Infeasible){
-			prune(master.lambda);
-
-            pricing.pricing_model.end();
-
-            env2.end();
-
-            master.rmp.clear();
-            master.rmp.end();
-			return std::make_pair(-1, -1);
-		}
-
-		//std::cout << "Reduced cost is equal to " << pricing.pricing_problem.getObjValue()  << std::endl;
-
-		// If reduced cost is negative, add the column to the master problem
-        if (pricing.pricing_problem.getObjValue() < -EPS){
-
-			//std::cout << "Reduced cost is equal to " << pricing.pricing_problem.getObjValue() << ", which is less than 0..." << std::endl;
+			IloNumArray pi(env2, data->n_items);
+        	master.rmp.getDuals(pi, master.partition_constraint);
 
 			IloNumArray entering_col(env2, data->n_items);
+			double pricing_obj = pricing.solveCombo(pi, entering_col);
 
-			pricing.pricing_problem.getValues(entering_col, pricing.x);
 
-			for (int i = 0; i < entering_col.getSize(); i++)
-            {
-                if (entering_col[i] > 0.9)
-                {
-                    entering_col[i] = 1;
-                }
-                else
-                {
-                    entering_col[i] = 0;
-                }
-            }
+			if (pricing_obj < -EPS){
+
+				IloNumVar new_lambda(master.master_objective(1) + master.partition_constraint(entering_col), 0, IloInfinity);
+				char var_name[50];
+				sprintf(var_name, "y%d", (int)master.lambda.getSize());
+				new_lambda.setName(var_name);
+
+				master.lambda.add(new_lambda);
+
+				std::vector<bool> items(data->n_items, false);
+				for (int i = 0; i < entering_col.getSize(); i++)
+				{
+					if (entering_col[i] > 1 - EPS)
+					{
+						items[i] = true;
+						// std::cout << i << " ";
+					}
+				}
+
+				master.lambda_items.push_back(items);
+
+				//std::cout << "Solving the RMP again..." << std::endl;
+
+				// ...
+				master.rmp.solve();
+
+				entering_col.clear();
+				entering_col.end();
+			}
+
+			else
+			{
+				//std::cout << "No column with negative reduced costs found. The current basis is optimal" << std::endl;
+
+				break;
+			}
+		
+		}
+	}
+	else{
+		while (true){
+			
+			if (master.rmp.getCplexStatus() == IloCplex::Infeasible){
+				break;
+			}
+
+			
+			IloNumArray pi(env2, data->n_items);
+			master.rmp.getDuals(pi, master.partition_constraint);
+
+			
+			pricing.setObjectiveFunction(pi);
+
+			
+			pricing.solvePricingProblem();
 			
 
-			// Add the column to the master problem
-			// (the cost of the new variable is always 1)
-			IloNumVar new_lambda(master.master_objective(1) + master.partition_constraint(entering_col), 0, IloInfinity);
-			char var_name[50];
-			sprintf(var_name, "y%d", (int)master.lambda.getSize());
-			new_lambda.setName(var_name);
+			//pricing.pricing_problem.exportModel("pricing.lp");
 
-			master.lambda.add(new_lambda);
 
-			std::vector<bool> items(data->n_items, false);
-            for (int i = 0; i < entering_col.getSize(); i++)
-            {
-                if (entering_col[i] > 1 - EPS)
-                {
-                    items[i] = true;
-                    // std::cout << i << " ";
-                }
-            }
+			pi.clear();
+			pi.end();
 
-			master.lambda_items.push_back(items);
+			// If pricing is infeasible prune the node
+			if (pricing.pricing_problem.getCplexStatus() == IloCplex::Infeasible){
+				prune(master.lambda);
 
-			//std::cout << "Solving the RMP again..." << std::endl;
+				pricing.pricing_model.end();
 
-			// ...
-			master.rmp.solve();
+				env2.end();
 
-			entering_col.clear();
-            entering_col.end();
-            pricing.pricing_problem.clear();
-            pricing.pricing_problem.end();
+				master.rmp.clear();
+				master.rmp.end();
+				return std::make_pair(-1, -1);
+			}
+
+			//std::cout << "Reduced cost is equal to " << pricing.pricing_problem.getObjValue()  << std::endl;
+
+			// If reduced cost is negative, add the column to the master problem
+			if (pricing.pricing_problem.getObjValue() < -EPS){
+
+				//std::cout << "Reduced cost is equal to " << pricing.pricing_problem.getObjValue() << ", which is less than 0..." << std::endl;
+
+				IloNumArray entering_col(env2, data->n_items);
+
+				pricing.pricing_problem.getValues(entering_col, pricing.x);
+
+				// for (int i = 0; i < entering_col.getSize(); i++)
+				// {
+				//     if (entering_col[i] > 0.9)
+				//     {
+				//         entering_col[i] = 1;
+				//     }
+				//     else
+				//     {
+				//         entering_col[i] = 0;
+				//     }
+				// }
+				
+
+				// Add the column to the master problem
+				// (the cost of the new variable is always 1)
+				IloNumVar new_lambda(master.master_objective(1) + master.partition_constraint(entering_col), 0, IloInfinity);
+				char var_name[50];
+				sprintf(var_name, "y%d", (int)master.lambda.getSize());
+				new_lambda.setName(var_name);
+
+				master.lambda.add(new_lambda);
+
+				std::vector<bool> items(data->n_items, false);
+				for (int i = 0; i < entering_col.getSize(); i++)
+				{
+					if (entering_col[i] > 1 - EPS)
+					{
+						items[i] = true;
+						// std::cout << i << " ";
+					}
+				}
+
+				master.lambda_items.push_back(items);
+
+				//std::cout << "Solving the RMP again..." << std::endl;
+
+				// ...
+				master.rmp.solve();
+
+				entering_col.clear();
+				entering_col.end();
+
+				
+				pricing.pricing_problem.clear();
+				pricing.pricing_problem.end();
+				
+			}
+			else
+			{
+				//std::cout << "No column with negative reduced costs found. The current basis is optimal" << std::endl;
+
+				pricing.pricing_problem.clear();
+				pricing.pricing_problem.end();
+				break;
+			}
+
+			//pricing.pricing_model.end();
 		}
-		else
-		{
-			//std::cout << "No column with negative reduced costs found. The current basis is optimal" << std::endl;
 
-			pricing.pricing_problem.clear();
-            pricing.pricing_problem.end();
-			break;
-		}
+	}
 
-		//pricing.pricing_model.end();
-    }
-
-
+	
 	if (master.rmp.getCplexStatus() == IloCplex::Infeasible){
 		prune(master.lambda);
 		return std::make_pair(-1, -1);
@@ -222,20 +288,20 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 	master.rmp.getValues(lambda_values, master.lambda);
 
 	// Prune if there's a artificial variable with a positive value
-	for (int i = 0; i < data->n_items; i++){
-		if (lambda_values[i] > EPS){
-			prune(master.lambda);
+	// for (int i = 0; i < data->n_items; i++){
+	// 	if (lambda_values[i] > EPS){
+	// 		prune(master.lambda);
 
-			//pricing.pricing_model.end();
-			//env2.end();
-			//lambda_values.end();
-			master.rmp.clear();
-			master.rmp.end();
-			//std::cout << "artificial variable" << std::endl;
+	// 		//pricing.pricing_model.end();
+	// 		//env2.end();
+	// 		//lambda_values.end();
+	// 		master.rmp.clear();
+	// 		master.rmp.end();
+	// 		//std::cout << "artificial variable" << std::endl;
 
-			return  std::make_pair(-1, -1);
-		}
-    }
+	// 		return  std::make_pair(-1, -1);
+	// 	}
+    // }
 
 	// Prune if the LB is greater than the best integer solution
 	if (std::ceil(master.rmp.getObjValue() - EPS) - best_integer >= 0){
@@ -301,6 +367,7 @@ void BP::BranchAndPrice(){
 	tree.push_back(root);
 	tree[0].LB = 0;
 	tree[0].UB = data->n_items;
+	tree[0].is_root = true;
 	//tree[0].separated = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
 	//tree[0].merged = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
 
