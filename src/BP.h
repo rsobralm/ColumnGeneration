@@ -9,6 +9,7 @@
 #include "Pricing.h"
 #include "Node.h"
 #include <list>
+#include <vector>
 #include <sys/resource.h>
 
 #define EPS 1e-6
@@ -39,7 +40,7 @@ public:
     std::pair<int, int> columnGeneration(Node *node);
     std::pair<int, int> getFractionalPair(double &most_fractional, std::vector<std::vector<double>> &z, IloNumArray &lambda_values, std::vector<std::vector<bool>> &lambda_items);
     void setBoundsAndAddConstraints(Master *master, Pricing *pricing, Node *node);
-    void BranchAndPrice();
+    void BranchAndPrice(bool use_combo);
     void prune(IloNumVarArray &lambda);
 };
 

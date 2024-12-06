@@ -65,7 +65,7 @@ void Pricing::solvePricingProblem(){
 
 }
 
-double Pricing::solveCombo(IloNumArray &pi, IloNumArray &x){
+double Pricing::solveCombo(IloNumArray &pi, IloNumArray &entering_col){
     int n_items = data->getNItems();
     item items[n_items];
 
@@ -74,32 +74,42 @@ double Pricing::solveCombo(IloNumArray &pi, IloNumArray &x){
         items[i].p = pi[i] * BIG_M;
         items[i].w = data->weights[i];
         items[i].x = 0;
-
-        std::cout << "Item " << i << " - p: " << pi[i] << " w: " << items[i].w << std::endl;
+        items[i].id = i;
+        //std::cout << "Item " << i << " - p: " << pi[i] << " w: " << items[i].w << std::endl;
     }
 
     long capacity = data->getBinCapacity();
+
+    //std::vector<double> entering_col;
 
     // Define bounds
     long lower_bound = 0; 
     long upper_bound = BIG_M; 
 
     bool define_solution = true; // Update solution vector
-    bool relaxed = false;        // No relaxed problem
+    bool relaxed = true;        // No relaxed problem
+
+    item* last_item = &items[n_items - 1];
+    item* first_item = &items[0];
 
     // Call the combo function to solve the knapsack problem
-    long cost = combo(items, items + n_items, capacity, lower_bound, upper_bound, define_solution, relaxed);
+    long cost = combo(first_item, last_item, capacity, lower_bound, upper_bound, define_solution, relaxed);
 
+    
 
-    std::cout << "Cost: " << cost << std::endl;
-    //cost *= -BIG_M;
+    // std::cout << "Cost: " << cost << std::endl;
+    cost *= EPS;
 
-    // for (int i = 0; i < n_items; i++)
-    // {
-    //     x[i] = items[i].x ? 1 : 0;
-    // }
+    //entering_col = std::vector<double>(n_items, 0.0);
 
-    return 0.0;
+    for (int i = 0; i < n_items; i++)
+    {   
+        int item_id = items[i].id;
+        //std::cout << "Item " << item_id << " - x: " << items[i].x << " " << entering_col[i] <<std::endl;
+        entering_col[item_id] = (items[i].x);
+    }
+
+    return cost;
 
 }
 

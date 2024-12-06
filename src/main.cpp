@@ -8,12 +8,18 @@ int main(int argc, char **argv)
 {
     Data data;
     data.readData(argv[1]);
+    bool use_combo = false;
+
+    if (argc > 2 and std::string(argv[2]) == "-p")
+    {
+        use_combo = true;
+    }
 
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
     start = std::chrono::system_clock::now();
     BP bp(&data);
-    bp.BranchAndPrice();
+    bp.BranchAndPrice(use_combo);
 
     end = std::chrono::system_clock::now();
 

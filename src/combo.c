@@ -103,6 +103,7 @@ typedef struct {
   itype   p;              /* profit                  */
   itype   w;              /* weight                  */
   boolean x;              /* solution variable       */
+  int id;
 } item;
 
 /* interval record */

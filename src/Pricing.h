@@ -7,6 +7,7 @@
 
 
 #define BIG_M 1e6
+#define EPS 1e-6
 
 
 class Pricing
@@ -25,7 +26,7 @@ public:
     void buildPricingProblem();
     void setObjectiveFunction(IloNumArray &pi);
     void solvePricingProblem();   
-    double solveCombo(IloNumArray &pi, IloNumArray &x_values);
+    double solveCombo(IloNumArray &pi, IloNumArray &entering_col);
     ~Pricing();
 };
 

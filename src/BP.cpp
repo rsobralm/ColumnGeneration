@@ -106,7 +106,6 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 	
 
-	
 	std::vector<std::vector<double>> z = std::vector<std::vector<double>>(data->getNItems(), std::vector<double>(data->getNItems(), 0));
 
 
@@ -122,11 +121,45 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 			IloNumArray pi(env2, data->n_items);
         	master.rmp.getDuals(pi, master.partition_constraint);
 
+			// pricing.setObjectiveFunction(pi);
+
+			
+			// pricing.solvePricingProblem();
+
+			// std::cout << pi << " ";
+			
+			// std::cout << std::endl;
+			
+	
+			// IloNumArray entering_col(env2, data->n_items);
+			// pricing.pricing_problem.getValues(entering_col, pricing.x);
+
+			// //  for (int i = 0; i < data->n_items; i++)
+			// // {
+			// // 	std::cout << entering_col[i] << " ";
+			// // }
+
+			// // std::cin.get();
+
+			// double pricing_obj = pricing.pricing_problem.getObjValue();
+			
+			
+
 			IloNumArray entering_col(env2, data->n_items);
+			//std::vector<double> column;
 			double pricing_obj = pricing.solveCombo(pi, entering_col);
 
+			// for (int i = 0; i < data->n_items; i++)
+			// {
+			// 	entering_col[i] = column[i];
+			// 	//std::cout << entering_col[i] << " ";
+			// }
+			// std::cin.get();
 
-			if (pricing_obj < -EPS){
+			
+
+
+			if (1 - pricing_obj < -EPS){
 
 				IloNumVar new_lambda(master.master_objective(1) + master.partition_constraint(entering_col), 0, IloInfinity);
 				char var_name[50];
@@ -213,17 +246,17 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 				pricing.pricing_problem.getValues(entering_col, pricing.x);
 
-				// for (int i = 0; i < entering_col.getSize(); i++)
-				// {
-				//     if (entering_col[i] > 0.9)
-				//     {
-				//         entering_col[i] = 1;
-				//     }
-				//     else
-				//     {
-				//         entering_col[i] = 0;
-				//     }
-				// }
+				for (int i = 0; i < entering_col.getSize(); i++)
+				{
+				    if (entering_col[i] > 0.9)
+				    {
+				        entering_col[i] = 1;
+				    }
+				    else
+				    {
+				        entering_col[i] = 0;
+				    }
+				}
 				
 
 				// Add the column to the master problem
@@ -282,6 +315,8 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 
 
 	node->LB = master.rmp.getObjValue();
+
+	//std::cout << "LB: " << node->LB << std::endl;
 
 	
 	IloNumArray lambda_values(env, master.lambda.getSize());
@@ -353,13 +388,13 @@ std::pair<int, int> BP::columnGeneration(Node *node){
     master.rmp.end();
 
 
-	//std::cout << "Most fractional pair: " << fractional_pair.first << " " << fractional_pair.second << std::endl;
+	std::cout << "Most fractional pair: " << fractional_pair.first << " " << fractional_pair.second << std::endl;
 	return fractional_pair;
 
 
 }
 
-void BP::BranchAndPrice(){
+void BP::BranchAndPrice(bool use_combo){
 
 	Node root;
 	std::vector<Node> tree;
@@ -367,7 +402,9 @@ void BP::BranchAndPrice(){
 	tree.push_back(root);
 	tree[0].LB = 0;
 	tree[0].UB = data->n_items;
-	tree[0].is_root = true;
+
+	if (use_combo)
+		tree[0].is_root = true;
 	//tree[0].separated = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
 	//tree[0].merged = std::vector<std::pair<int, int>>(data->n_items, std::make_pair(-1, -1));
 
