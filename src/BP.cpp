@@ -156,6 +156,18 @@ std::pair<int, int> BP::columnGeneration(Node *node){
 			// }
 			// std::cin.get();
 
+			for (int i = 0; i < entering_col.getSize(); i++)
+				{
+				    if (entering_col[i] > 0.5)
+				    {
+				        entering_col[i] = 1;
+				    }
+				    else
+				    {
+				        entering_col[i] = 0;
+				    }
+				}
+
 			
 
 
